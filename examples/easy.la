@@ -1,0 +1,16 @@
+//comments
+fun f1 (x: <L<unit,1>,1>): <L<unit,0>,1> = 
+  match x with | [] -> []
+  | x::xs -> let _ = tick 1 in x :: (f xs)
+
+//comments
+fun f2 (x: <L<unit,2>,1>): <L<unit,0>,1> = 
+let p = f1 (x: L<unit,1>) in
+let q = f1 (x: L<unit,1>) in
+q
+
+//ill-typed:
+fun f2 (x: <L<unit,2>,1>): <L<unit,0>,1> = 
+let p = f1 in
+let q = f1 in
+q
