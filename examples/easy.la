@@ -1,6 +1,14 @@
+Current types: 1. unit 2. LA 3. -> Resource annotated types A = <\tau, ([0]|([1-9][0-9]*))>
+Current expressoins: 1. x / (x:tau) 2. match e with | [] -> e1 | x,xs -> e2
+3. tick INT([-]*[0]|([1-9][0-9]*)) 4. let (x:\tau | _ ) = e in e' 5. fun f (x:A): B = e
+6. x::xs 7. e1 e2
+8.()
+9. begin e end
+
+let 1 = 2 in 1 //Dr.Evil
 //comments
 fun f1 (x: <L<unit,1>,1>): <L<unit,0>,1> = 
-  match x with | [] -> []
+  match x with | [] -> begin [] end
   | x::xs -> let _ = tick 1 in x :: (f xs)
 
 //comments
@@ -10,7 +18,10 @@ let q = f1 (x: L<unit,1>) in
 q
 
 //ill-typed:
-fun f2 (x: <L<unit,2>,1>): <L<unit,0>,1> = 
-let p = f1 x in
+fun f2 (x: <L<unit,2>,1>): <<L<unit,0>,2>,1> = 
+let (p: L<unit,0>) = f1 x in
 let q = f1 x in
 q
+
+
+
