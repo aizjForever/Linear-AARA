@@ -11,6 +11,6 @@ q
 
 //ill-typed:
 fun f2 (x: <L<unit,2>,1>): <L<unit,0>,1> = 
-let p = f1 in
-let q = f1 in
+let p = f1 x in
+let q = f1 x in
 q
