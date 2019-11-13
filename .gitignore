@@ -1,0 +1,30 @@
+bin/
+
+# TypeChecker
+log
+*.out
+
+
+# OCaml
+*.a
+*.abs
+*.annot
+*.bc
+*.cma
+*.cmi
+*.cmo
+*.cmx
+*.cmxa
+*.cmxs
+*.ll
+*.o
+
+_build/
+
+*.byte
+*.native
+sandbox
+sandbox.ml
+
+setup.data
+setup.log

@@ -1,4 +1,4 @@
-SUBDIRS = parse,type,top
+SUBDIRS = parse,top,util
 LIBS = str
 MAIN = top
 
@@ -8,6 +8,12 @@ OCAMLBUILDFLAGS = -use-ocamlfind
 DEBUG = $(MAIN).d.byte
 NATIVE = $(MAIN).native
 TOPLEVEL = $(MAIN).top
+
+
+default: all
+
+bin:
+	mkdir bin
 
 all: lat
 
