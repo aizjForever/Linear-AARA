@@ -31,6 +31,17 @@ type gdecl =
 
 type program = gdecl list
 
+let make_annot_typ p q = (p,q)
+
+let rec sub_type ty1 ty2 = match (ty1, ty2) with | 
+  UNIT, UNIT -> true
+| LIST a, LIST b -> sub_type_annot a b
+| Arrow (a,b), Arrow (a',b') -> sub_type_annot a' a && sub_type_annot b b'
+| _ -> false 
+
+and sub_type_annot aty1 aty2 = match (aty1, aty2) with |
+  ((ty1,q1),(ty2,q2)) -> (sub_type ty1 ty2) && q1 >= q2
+ 
 
 let rec typ_to_string = function
 | UNIT -> "unit"
