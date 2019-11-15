@@ -1,0 +1,1 @@
+val check: Ast.program -> string list

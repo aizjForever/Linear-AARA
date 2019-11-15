@@ -57,6 +57,9 @@ let main cmd =
     say_if cmd.verbose (fun () -> "Parsing... " ^ source);
     let ast = Parse.parse source in
     say_if cmd.dump_ast (fun () -> Ast.to_string ast);
+    let result = TypeChecker.check ast in
+    if result = [] then say (sprintf "Typecheck completes for %s\n" source) else 
+    say (sprintf "Type does not check for %s\n" (List.fold_left result  ~init:"" ~f:(fun base funName -> base ^ (sprintf "`%s' " funName))));
     exit 0
 
 

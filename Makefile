@@ -1,4 +1,4 @@
-SUBDIRS = parse,top,util
+SUBDIRS = parse,top,util,type
 LIBS = str
 MAIN = top
 

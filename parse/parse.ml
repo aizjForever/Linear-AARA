@@ -4,6 +4,5 @@ let parse filename =
     fun chan ->
       let lexbuf = Lexing.from_channel chan in
       let ast = Parser.program Lexer.initial lexbuf in
-      let _ = print_string (Ast.to_string ast) in
-      []
+      ast
   )

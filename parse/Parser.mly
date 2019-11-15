@@ -37,7 +37,7 @@ gdecls :
   ;
 
 atype:
-  LANGLE typ COMMA DECCONST RANGLE { A.ANNOT ($2, $4) }
+  LANGLE typ COMMA DECCONST RANGLE { ($2, $4) }
   ;
 
 typ:
@@ -52,21 +52,21 @@ gdecl :
 
 exp:
   LPAREN exp RPAREN { $2 }
-  | IDENT { A.Var ($1, None) }
-  | LPAREN IDENT COMMA typ RPAREN { A.Var ($2, Some $4) }
+  | IDENT { A.Var (A.ANNOT ($1, None)) }
+  | LPAREN IDENT COMMA typ RPAREN { A.Var (A.ANNOT($2, Some $4)) }
   | TICK DECCONST { A.Tick $2 }
   | exp CONS exp { A.Cons ($1, $3) }
   | exp exp { A.App ($1, $2) }
-  | LET WILD ASSIGN exp IN exp { A.Let (None, None, $4, $6) }
-  | LET IDENT ASSIGN exp IN exp { A.Let (Some $2, None, $4, $6) }
-  | LET WILD COLON typ ASSIGN exp IN exp { A.Let (None, Some $4, $6, $8) }
-  | LET IDENT COLON typ ASSIGN exp IN exp { A.Let (Some $2, Some $4, $6, $8) }
+  | LET WILD ASSIGN exp IN exp { A.Let (A.WILD, $4, $6) }
+  | LET IDENT ASSIGN exp IN exp { A.Let (A.ANNOT ($2, None), $4, $6) }
+  | LET IDENT COLON typ ASSIGN exp IN exp { A.Let (A.ANNOT ($2, Some $4), $6, $8) }
   | MATCH exp WITH VERTICALLINE NIL ARROW exp VERTICALLINE ident CONS ident ARROW exp { A.Match ($2, $7, $9, $11, $13) }
   | LPAREN RPAREN { A.Triv }
   ;
 
 ident:
-  WILD { None }
-  | IDENT { Some $1 }
+  WILD { A.WILD }
+  | IDENT { A.ANNOT ($1, None) }
+  | LPAREN IDENT COLON typ RPAREN  { A.ANNOT ($2, Some $4) } 
   ;
 %%

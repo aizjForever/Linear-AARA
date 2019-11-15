@@ -1,0 +1,1 @@
+fun f2 (x: <unit, 1>): <unit ,1> = ()
