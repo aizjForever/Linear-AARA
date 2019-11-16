@@ -3,6 +3,13 @@ Linear AARA Typechecker
 Author: Zejie Ai
 *)
 
+
+(*
+The typecheker consists of two passes
+i. Forward pass: complete any annotations for the variables that the user does not provide
+ii. Backward pass: check whether the sharing of the variables are correct
+*)
+
 module C = Core
 module A = Ast
 module S = Symbol
@@ -15,7 +22,67 @@ let (<-|) = A.make_annot_typ
 let sub = Int32.sub
 let add = Int32.add
 
-let rec backward_check body = raise Unimplemented
+let rec val_and_del ctx id exp_typ =
+    match (C.Map.find ctx id) with
+    | None -> ctx
+    | Some ty -> begin
+        if A.sub_type exp_typ ty then C.Map.remove ctx id
+        else raise TypeCheckError
+    end
+
+let rec combine_typ = raise Unimplemented
+
+let rec backward_check = function 
+| A.Var A.ANNOT (id, Some ty) -> C.Map.singleton (module S) id ty
+| A.Tick q -> C.Map.empty (module S)
+| A.Triv -> C.Map.empty (module S)
+| A.Cons (e, es) -> begin
+    let ctx_e = backward_check e in
+    let ctx_es = backward_check es in
+    C.Map.merge_skewed ctx_e ctx_es ~combine: combine_typ
+end
+| A.App (e1, e2) -> begin
+    let ctx_e1 = backward_check e1 in
+    let ctx_e2 = backward_check e2 in
+    C.Map.merge_skewed ctx_e1 ctx_e2 ~combine: combine_typ
+end
+
+| A.Let (A.WILD, e, e1) -> begin
+    let ctx_e = backward_check e in
+    let ctx_e1 = backward_check e1 in
+    C.Map.merge_skewed ctx_e ctx_e1 ~combine: combine_typ
+end
+
+| A.Let (A.ANNOT (id, Some ty), e, e1) -> begin
+    let ctx_e1 = backward_check e1 in
+    match C.Map.find ctx_e1 id with
+    | None -> raise TypeCheckError (*Though this branch is impossible to reach*)
+    | Some ty2 -> if A.sub_type ty ty2 then 
+      begin
+          let ctx_e1 = C.Map.remove ctx_e1 id in
+          let ctx_e = backward_check e in
+          C.Map.merge_skewed ctx_e ctx_e1 ~combine: combine_typ
+      end
+      else raise TypeCheckError
+end
+
+| A.Match (e, e0, idx, idxs, e1) -> begin
+    let rec validate ctx = function
+    | A.WILD -> ctx
+    | A.ANNOT (id, Some ty) -> begin
+       val_and_del ctx id ty 
+    end
+    | _ -> failwith "Impossible" 
+    in
+    let ctx_e1 = backward_check e1 in
+    let ctx_e1 = validate ctx_e1 idxs in
+    let ctx_e1 = validate ctx_e1 idx in
+    let ctx_e0 = backward_check e0 in
+    let ctx_e = backward_check e in
+    C.Map.merge_skewed (C.Map.merge_skewed ctx_e1 ctx_e0 ~combine: combine_typ) ctx_e ~combine: combine_typ
+end
+
+| _ -> failwith "Impossible"
 
 
 let rec validate_var idx ctx exp_typ = 
@@ -132,7 +199,9 @@ let rec check_fun ctx = function
     let annotated_body, ty_body = forward_check context q body in
     if A.sub_type_annot ret_typ ty_body then
     begin
-        let _ = backward_check annotated_body in
+        let synth_ctx = backward_check annotated_body in
+        let new_ctx = val_and_del synth_ctx arg ty in
+        let _ = val_and_del new_ctx funName (A.Arrow (arg_typ, ret_typ)) in
         A.Arrow (arg_typ, ret_typ)
     end
     else raise TypeCheckError 

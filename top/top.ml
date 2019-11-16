@@ -15,6 +15,7 @@ type cmdline =
   dynamics: bool;
   verbose: bool;
   dump_ast: bool;
+  parse_only: bool;
   filename: string;
 }
 
@@ -25,12 +26,14 @@ let read_cmdline () =
     let dynamics = ref false in
     let verbose = ref false in
     let dump_ast = ref false in
+    let parse_only = ref false in
     let filename = ref None in
     let opts = 
     [ ('i', "infer", set mode TypeInfer, None);
       ('d', "dynamics", set dynamics true, None);
       ('v', "verbose",   set verbose true, None);
       ('a', "dump-ast", set dump_ast true, None);
+      ('p', "parse-only", set parse_only true, None);
     ] in
     let file_opt f =
        match !filename with
@@ -43,6 +46,7 @@ let read_cmdline () =
       dynamics = !dynamics;
       verbose = !verbose;
       dump_ast = !dump_ast;
+      parse_only = !parse_only;
       filename = match !filename with
           | Some s -> s
           | None -> say "Error: no input file provided"; raise EXIT }
@@ -57,6 +61,7 @@ let main cmd =
     say_if cmd.verbose (fun () -> "Parsing... " ^ source);
     let ast = Parse.parse source in
     say_if cmd.dump_ast (fun () -> Ast.to_string ast);
+    if cmd.parse_only then exit 0 else
     let result = TypeChecker.check ast in
     if result = [] then say (sprintf "Typecheck completes for %s\n" source) else 
     say (sprintf "Type does not check for %s\n" (List.fold_left result  ~init:"" ~f:(fun base funName -> base ^ (sprintf "`%s' " funName))));
