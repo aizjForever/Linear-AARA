@@ -30,7 +30,20 @@ let rec val_and_del ctx id exp_typ =
         else raise TypeCheckError
     end
 
-let rec combine_typ = raise Unimplemented
+let rec combine_typ ~key:k ty1 ty2 = 
+    let rec merge ty1 ty2 = match (ty1, ty2) with
+    | (A.UNIT, A.UNIT) -> A.UNIT
+    | (A.LIST a, A.LIST b) -> A.LIST (merge_annot_typ a b)
+    | (A.Arrow (_,_), A.Arrow (_, _)) -> begin
+        if A.sub_type ty1 ty2 then ty2
+        else if A.sub_type ty2 ty1 then ty1 else raise TypeCheckError
+    end
+    | _ -> raise TypeCheckError (*not quite possible*) 
+
+    and merge_annot_typ (ty1, q1) (ty2, q2) = (merge ty1 ty2, add q1 q2)
+    in
+    merge ty1 ty2
+   
 
 let rec backward_check = function 
 | A.Var A.ANNOT (id, Some ty) -> C.Map.singleton (module S) id ty
@@ -189,6 +202,9 @@ end
 
 | _ -> failwith "Impossible"
 
+let say = Core.prerr_endline
+let rec sayif b t = if b then say t else say "laji"
+
 
 let rec check_fun ctx = function
 | A.Fdefn (funName, (arg_typ, arg), ret_typ, body) ->
@@ -197,7 +213,9 @@ let rec check_fun ctx = function
     let (ty,q) = arg_typ in
     let context = C.Map.set ~key:arg ~data:ty context in 
     let annotated_body, ty_body = forward_check context q body in
-    if A.sub_type_annot ret_typ ty_body then
+    (* say (A.annotated_typ_to_string ty_body); *)
+    (* sayif (A.sub_type_annot ty_body ret_typ) "good"; *)
+    if A.sub_type_annot ty_body ret_typ then
     begin
         let synth_ctx = backward_check annotated_body in
         let new_ctx = val_and_del synth_ctx arg ty in
@@ -217,7 +235,8 @@ let rec check prog =
         try
             checki (C.Map.set ~key:funName ~data:(check_fun ctx p) ctx) ps
         with
-        | _ -> (Symbol.name funName) :: (checki ctx ps)
+        | TypeCheckError -> (Symbol.name funName) :: (checki ctx ps)
+        | e -> raise e
         
     end
     in

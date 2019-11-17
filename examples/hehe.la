@@ -1,1 +1,1 @@
-fun f2 (x: <unit, 1>): <unit ,1> = ()
+fun f2 (x: <L(<unit, 1>),0>): <L(<unit, 0>) ,0> = (x: L(<unit, 0>))

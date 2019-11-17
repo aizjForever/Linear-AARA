@@ -32,7 +32,7 @@ let eof () =
 }
 
 let id = ['A'-'Z' 'a'-'z' '_']['A'-'Z' 'a'-'z' '0'-'9' '_']*
-let decnum = ("0" | ['1'-'9'](['0'-'9']*))
+let decnum = ('0' | (['1'-'9'](['0'-'9']*)))
 
 let ws = [' ' '\t' '\r' '\011' '\012']
 
@@ -40,8 +40,6 @@ rule initial =
   parse
     ws+         { initial lexbuf }
   | '\n'        { initial lexbuf }
-  | '['         { T.LBRACE }
-  | ']'         { T.RBRACE }
   | '('         { T.LPAREN }
   | ')'         { T.RPAREN }
   | '='         { T.ASSIGN }
@@ -51,6 +49,7 @@ rule initial =
   | '<'         { T.LANGLE }
   | '>'         { T.RANGLE }
   | ','         { T.COMMA }
+  | 'L'         { T.LIST }
 
 
   | "unit"      { T.UNIT }
@@ -61,8 +60,6 @@ rule initial =
   | "in"        { T.IN }
   | "::"        { T.CONS }
   | "fun"       { T.FUN }
-  | "begin"     { T.BEGIN }
-  | "end"       { T.END }
   | "[]"        { T.NIL }
 
   | decnum as n { decnumber n lexbuf }

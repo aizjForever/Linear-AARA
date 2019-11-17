@@ -9,17 +9,22 @@ module A = Ast
 %token UNIT LIST LANGLE RANGLE COMMA ARROW
 %token COLON
 %token MATCH WITH VERTICALLINE
-%token LBRACE RBRACE
 %token TICK
 %token LET ASSIGN IN
 %token WILD
 %token CONS
 %token FUN
-%token BEGIN END
 %token <Int32.t> DECCONST
 %token <Symbol.t> IDENT
 %token NIL
 %token EOF
+%token APP
+%token PMATCH PLET
+
+
+%left PMATCH PLET
+%right CONS
+%left APP
 
 %type <Ast.gdecl list> program
 
@@ -53,14 +58,14 @@ gdecl :
 exp:
   LPAREN exp RPAREN { $2 }
   | IDENT { A.Var (A.ANNOT ($1, None)) }
-  | LPAREN IDENT COMMA typ RPAREN { A.Var (A.ANNOT($2, Some $4)) }
+  | LPAREN IDENT COLON typ RPAREN { A.Var (A.ANNOT($2, Some $4)) }
   | TICK DECCONST { A.Tick $2 }
   | exp CONS exp { A.Cons ($1, $3) }
-  | exp exp { A.App ($1, $2) }
-  | LET WILD ASSIGN exp IN exp { A.Let (A.WILD, $4, $6) }
-  | LET IDENT ASSIGN exp IN exp { A.Let (A.ANNOT ($2, None), $4, $6) }
-  | LET IDENT COLON typ ASSIGN exp IN exp { A.Let (A.ANNOT ($2, Some $4), $6, $8) }
-  | MATCH exp WITH VERTICALLINE NIL ARROW exp VERTICALLINE ident CONS ident ARROW exp { A.Match ($2, $7, $9, $11, $13) }
+  | ident exp %prec APP {A.App (A.Var $1, $2)}
+  | LET WILD ASSIGN exp IN exp  %prec PLET { A.Let (A.WILD, $4, $6) }
+  | LET IDENT ASSIGN exp IN exp %prec PLET { A.Let (A.ANNOT ($2, None), $4, $6) }
+  | LET IDENT COLON typ ASSIGN exp IN exp %prec PLET { A.Let (A.ANNOT ($2, Some $4), $6, $8) }
+  | MATCH exp WITH VERTICALLINE NIL ARROW exp VERTICALLINE ident CONS ident ARROW exp %prec PMATCH { A.Match ($2, $7, $9, $11, $13) }
   | LPAREN RPAREN { A.Triv }
   ;
 
