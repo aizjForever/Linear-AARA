@@ -71,7 +71,7 @@ rule initial =
   | "*/"        {  initial lexbuf }
   | "//"        { comment_line lexbuf }
   | eof         { eof () }
-  | _           { failwith "Illegal character lo l"}
+  | _           { failwith "Illegal character lol"}
 
 and comment =
   parse
@@ -83,6 +83,7 @@ and comment =
 and comment_line =
   parse
     '\n'       { initial lexbuf }
+  | eof        { eof () }
   | _          { comment_line lexbuf }
 
 {}
