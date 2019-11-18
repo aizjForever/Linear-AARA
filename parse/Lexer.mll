@@ -50,6 +50,8 @@ rule initial =
   | '>'         { T.RANGLE }
   | ','         { T.COMMA }
   | 'L'         { T.LIST }
+  | '['         { T.LBRACKET}
+  | ']'         { T.RBRACKET}
 
 
   | "unit"      { T.UNIT }
@@ -60,7 +62,7 @@ rule initial =
   | "in"        { T.IN }
   | "::"        { T.CONS }
   | "fun"       { T.FUN }
-  | "[]"        { T.NIL }
+  | "->"        { T.ARROW }
 
   | decnum as n { decnumber n lexbuf }
   | id as name  { let id = Symbol.symbol name in T.IDENT id }

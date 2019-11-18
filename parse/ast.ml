@@ -5,13 +5,16 @@ open Printf
 type ident = Symbol.t
 
 
-
 type typ =
 | UNIT
+| ANYLIST (*for typing nil*)
 | LIST of annotated_typ
 | Arrow of annotated_typ * annotated_typ
 
+
 and annotated_typ = typ * Int32.t
+
+
 
 type var_annot = 
 | WILD
@@ -25,6 +28,7 @@ type exp =
 | Let of var_annot * exp * exp (*let x/_ = e1 in e2*)
 | Match of exp * exp * var_annot * var_annot * exp (*match e with | [] -> e1 | x/_ :: xs/_ -> e2*)
 | Triv
+| NIL of typ option
 
 type gdecl =
 | Fdefn of (ident * (annotated_typ * ident) * annotated_typ * exp)
@@ -37,6 +41,9 @@ let rec sub_type ty1 ty2 = match (ty1, ty2) with |
   UNIT, UNIT -> true
 | LIST a, LIST b -> sub_type_annot a b
 | Arrow (a,b), Arrow (a',b') -> sub_type_annot a' a && sub_type_annot b b'
+| ANYLIST, ANYLIST -> true
+| ANYLIST, LIST _ -> true
+| LIST _, ANYLIST -> false 
 | _ -> false 
 
 and sub_type_annot aty1 aty2 = match (aty1, aty2) with |
@@ -45,6 +52,7 @@ and sub_type_annot aty1 aty2 = match (aty1, aty2) with |
 
 let rec typ_to_string = function
 | UNIT -> "unit"
+| ANYLIST -> "L(Any)"
 | LIST typ -> "L" ^ (annotated_typ_to_string typ)
 | Arrow (t1,t2) -> (annotated_typ_to_string t1) ^ " -> " ^ (annotated_typ_to_string t2)
 and annotated_typ_to_string =
@@ -59,8 +67,8 @@ let rec exp_to_string = function
 | Var (ANNOT (id, Some typ)) -> sprintf "(%s:%s)" (Symbol.name id) (typ_to_string typ)
 | Var (ANNOT (id, None)) -> Symbol.name id
 | Tick q -> sprintf "tick %ld" q
-| Cons (e,es) -> sprintf "%s::%s" (exp_to_string e) (exp_to_string es)
-| App (e1,e2) -> sprintf "%s %s" (exp_to_string e1) (exp_to_string e2)
+| Cons (e,es) -> sprintf "(%s::%s)" (exp_to_string e) (exp_to_string es)
+| App (e1,e2) -> sprintf "(%s %s)" (exp_to_string e1) (exp_to_string e2)
 | Let (WILD, e, e1) -> sprintf "let _ = %s \n in %s \n end" (exp_to_string e) (exp_to_string e1)
 | Let (ANNOT (id, None), e, e1) ->
   sprintf "let %s = %s \n in %s \n end" (Symbol.name id) (exp_to_string e) (exp_to_string e1)
@@ -71,6 +79,8 @@ let rec exp_to_string = function
   sprintf "match (%s) with \n | [] -> %s \n | %s::%s -> %s" (exp_to_string e) 
   (exp_to_string e1) (make_id_from_typ_annot idx) (make_id_from_typ_annot idxs) (exp_to_string e2)
 | Triv -> "()"
+| NIL None -> "[]"
+| NIL (Some ty) -> sprintf "([]: %s)" (typ_to_string ty)
 | _ -> failwith "Impossible"
 
 

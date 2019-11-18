@@ -5,7 +5,7 @@ module A = Ast
 
 %}
 
-%token LPAREN RPAREN
+%token LPAREN RPAREN LBRACKET RBRACKET
 %token UNIT LIST LANGLE RANGLE COMMA ARROW
 %token COLON
 %token MATCH WITH VERTICALLINE
@@ -16,7 +16,6 @@ module A = Ast
 %token FUN
 %token <Int32.t> DECCONST
 %token <Symbol.t> IDENT
-%token NIL
 %token EOF
 %token APP
 %token PMATCH PLET
@@ -48,6 +47,7 @@ atype:
 typ:
   UNIT { A.UNIT }
   | LIST LPAREN atype RPAREN { A.LIST $3 }
+  | atype ARROW atype {A.Arrow ($1, $3)}
   ;
 
 
@@ -59,15 +59,19 @@ exp:
   LPAREN exp RPAREN { $2 }
   | IDENT { A.Var (A.ANNOT ($1, None)) }
   | LPAREN IDENT COLON typ RPAREN { A.Var (A.ANNOT($2, Some $4)) }
+  | LBRACKET RBRACKET {A.NIL None}
+  | LPAREN LBRACKET RBRACKET COLON LIST LPAREN atype RPAREN RPAREN {A.NIL (Some (A.LIST $7))}
   | TICK DECCONST { A.Tick $2 }
   | exp CONS exp { A.Cons ($1, $3) }
   | ident exp %prec APP {A.App (A.Var $1, $2)}
   | LET WILD ASSIGN exp IN exp  %prec PLET { A.Let (A.WILD, $4, $6) }
   | LET IDENT ASSIGN exp IN exp %prec PLET { A.Let (A.ANNOT ($2, None), $4, $6) }
   | LET IDENT COLON typ ASSIGN exp IN exp %prec PLET { A.Let (A.ANNOT ($2, Some $4), $6, $8) }
-  | MATCH exp WITH VERTICALLINE NIL ARROW exp VERTICALLINE ident CONS ident ARROW exp %prec PMATCH { A.Match ($2, $7, $9, $11, $13) }
+  | MATCH exp WITH VERTICALLINE LBRACKET RBRACKET ARROW exp VERTICALLINE ident CONS ident ARROW exp %prec PMATCH { A.Match ($2, $8, $10, $12, $14) }
   | LPAREN RPAREN { A.Triv }
   ;
+
+
 
 ident:
   WILD { A.WILD }
