@@ -34,6 +34,9 @@ let rec combine_typ ~key:k ty1 ty2 =
     let rec merge ty1 ty2 = match (ty1, ty2) with
     | (A.UNIT, A.UNIT) -> A.UNIT
     | (A.LIST a, A.LIST b) -> A.LIST (merge_annot_typ a b)
+    | (A.LIST _, A.ANYLIST) -> ty1
+    | (A.ANYLIST, A.LIST _) -> ty2
+    | (A.ANYLIST, A.ANYLIST) -> A.ANYLIST
     | (A.Arrow (_,_), A.Arrow (_, _)) -> begin
         if A.sub_type ty1 ty2 then ty2
         else if A.sub_type ty2 ty1 then ty1 else raise TypeCheckError
@@ -95,6 +98,8 @@ end
     C.Map.merge_skewed (C.Map.merge_skewed ctx_e1 ctx_e0 ~combine: combine_typ) ctx_e ~combine: combine_typ
 end
 
+| A.NIL _ -> C.Map.empty (module S)
+
 | _ -> failwith "Impossible"
 
 
@@ -142,11 +147,19 @@ end
 begin
     let annot_e, (ty_e,q1) = forward_check ctx q e in
     let annot_es, (ty_es, q2) = forward_check ctx q1 es in
-    match ty_es with 
+    match ty_es with
+    | A.LIST (A.ANYLIST, p) -> if A.sub_type A.ANYLIST ty_e then 
+                                begin
+                                    let rem = sub q2 p in
+                                    if rem >= 0l then A.Cons (annot_e, annot_es), (A.LIST (ty_e, p)) <-| rem else raise TypeCheckError
+                                end
+                               else raise TypeCheckError
+
     | A.LIST (es_elt_typ, p) -> if A.sub_type ty_e es_elt_typ then 
                                 let rem = sub q2 p in
                                 if rem >= 0l then A.Cons (annot_e, annot_es), ty_es <-| rem else raise TypeCheckError
                                 else raise TypeCheckError
+    | A.ANYLIST -> A.Cons (annot_e, annot_es), (A.LIST (ty_e <-| 0l)) <-| q2 (*We do not know how much potential to put in each element, so just put 0*)
     | _ -> raise TypeCheckError 
 end
 
@@ -197,10 +210,20 @@ begin
         A.Match (annot_e, annot_e0, new_idx, new_idxs, annot_e1), combine_annot_typ (ty_e0, q2) (ty_e1, q3)
     end
 
+    | A.ANYLIST -> begin
+        let annot_e0, (ty_e0, q2) = forward_check ctx q1 e0 in
+        A.Match (annot_e, annot_e0, A.WILD, A.WILD, A.Triv), ty_e0 <-| q2 (*This is a little bit hacky; however this really does not harm soundness*) 
+    end
+
     | _ -> raise TypeCheckError
 end
 
+| A.NIL None -> A.NIL None, A.ANYLIST <-| q
+
+| A.NIL (Some ty) -> A.NIL (Some ty), ty <-| q
+
 | _ -> failwith "Impossible"
+
 
 let say = Core.prerr_endline
 let rec sayif b t = if b then say t else say "laji"
@@ -208,8 +231,7 @@ let rec sayif b t = if b then say t else say "laji"
 
 let rec check_fun ctx = function
 | A.Fdefn (funName, (arg_typ, arg), ret_typ, body) ->
-    let context = C.Map.empty (module S) in
-    let context = C.Map.set ~key:funName ~data:(A.Arrow (arg_typ, ret_typ)) context in
+    let context = C.Map.set ~key:funName ~data:(A.Arrow (arg_typ, ret_typ)) ctx in
     let (ty,q) = arg_typ in
     let context = C.Map.set ~key:arg ~data:ty context in 
     let annotated_body, ty_body = forward_check context q body in
