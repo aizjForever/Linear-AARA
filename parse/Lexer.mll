@@ -54,6 +54,7 @@ rule initial =
   | ']'         { T.RBRACKET}
 
 
+  | "type"      { T.TYPE }
   | "unit"      { T.UNIT }
   | "match"     { T.MATCH }
   | "with"      { T.WITH }
