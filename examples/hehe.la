@@ -26,11 +26,13 @@ fun f3 (x: <L(<unit, 1>),0>): d =
     [] -> []
     | xx::xs -> x
 
+
 type l1_bad = L(<unit,0>)
 type l1_good = L(<unit,1>)
 type l2 = L(<unit,0>)
 
 type p = <l1_bad * l2, 0>
+
 type pp = <l2,0>
 
 fun rev_append (l: p): pp = 
