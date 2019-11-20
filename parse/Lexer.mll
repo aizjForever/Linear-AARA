@@ -52,6 +52,7 @@ rule initial =
   | 'L'         { T.LIST }
   | '['         { T.LBRACKET}
   | ']'         { T.RBRACKET}
+  | '*'         { T.STAR }
 
 
   | "type"      { T.TYPE }
@@ -60,6 +61,7 @@ rule initial =
   | "with"      { T.WITH }
   | "tick"      { T.TICK }
   | "let"       { T.LET }
+  | "letp"      { T.LETP}
   | "in"        { T.IN }
   | "::"        { T.CONS }
   | "fun"       { T.FUN }

@@ -30,6 +30,13 @@ let rec val_and_del ctx id exp_typ =
         else raise TypeCheckError
     end
 
+let rec validate ctx = function
+    | A.WILD -> ctx
+    | A.ANNOT (id, Some ty) -> begin
+       val_and_del ctx id ty 
+    end
+    | _ -> failwith "Impossible" 
+
 let rec combine_typ ~key:k ty1 ty2 = 
     let rec merge ty1 ty2 = match (ty1, ty2) with
     | (A.UNIT, A.UNIT) -> A.UNIT
@@ -41,6 +48,7 @@ let rec combine_typ ~key:k ty1 ty2 =
         if A.sub_type ty1 ty2 then ty2
         else if A.sub_type ty2 ty1 then ty1 else raise TypeCheckError
     end
+    | (A.Prod (a,b), A.Prod (c,d)) -> A.Prod (merge a c, merge b d)
     | _ -> raise TypeCheckError (*not quite possible*) 
 
     and merge_annot_typ (ty1, q1) (ty2, q2) = (merge ty1 ty2, add q1 q2)
@@ -83,13 +91,6 @@ end
 end
 
 | A.Match (e, e0, idx, idxs, e1) -> begin
-    let rec validate ctx = function
-    | A.WILD -> ctx
-    | A.ANNOT (id, Some ty) -> begin
-       val_and_del ctx id ty 
-    end
-    | _ -> failwith "Impossible" 
-    in
     let ctx_e1 = backward_check e1 in
     let ctx_e1 = validate ctx_e1 idxs in
     let ctx_e1 = validate ctx_e1 idx in
@@ -99,6 +100,20 @@ end
 end
 
 | A.NIL _ -> C.Map.empty (module S)
+
+| A.Pair (e1, e2) -> begin
+    let ctx_e1 = backward_check e1 in
+    let ctx_e2 = backward_check e2 in
+    C.Map.merge_skewed ctx_e1 ctx_e2 ~combine: combine_typ
+end 
+
+| A.Letp (e, idx1, idx2, e1) -> begin
+    let ctx_e1 = backward_check e1 in
+    let ctx_e1 = validate ctx_e1 idx2 in
+    let ctx_e1 = validate ctx_e1 idx1 in
+    let ctx_e = backward_check e in
+    C.Map.merge_skewed ctx_e1 ctx_e ~combine: combine_typ
+end
 
 | _ -> failwith "Impossible"
 
@@ -221,6 +236,26 @@ end
 | A.NIL None -> A.NIL None, A.ANYLIST <-| q
 
 | A.NIL (Some ty) -> A.NIL (Some ty), ty <-| q
+
+| A.Pair (e1, e2) -> begin
+    let annot_e1, (ty_e1, q1) = forward_check ctx q e1 in
+    let annot_e2, (ty_e2, q2) = forward_check ctx q1 e2 in
+    A.Pair (annot_e1, annot_e2), (A.Prod (ty_e1, ty_e2)) <-| q2
+end
+
+| A.Letp (e, idx1, idx2, e1) -> begin
+    let annot_e, (ty_e, q1) = forward_check ctx q e in
+    match (ty_e) with
+    | A.Prod (t1, t2) -> begin
+        let new_ctx, new_idx1 = validate_var idx1 ctx t1 in
+        let new_ctx, new_idx2 = validate_var idx2 new_ctx t2 in
+        let annot_e1, (ty_e1, q2) = forward_check new_ctx q1 e1 in
+        A.Letp (annot_e, new_idx1, new_idx2, annot_e1), ty_e1 <-| q2
+    end
+        
+
+    | _ -> raise TypeCheckError
+end
 
 | _ -> failwith "Impossible"
 

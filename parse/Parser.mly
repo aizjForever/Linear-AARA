@@ -17,9 +17,10 @@ let rec extract_typ = function
 %token LPAREN RPAREN LBRACKET RBRACKET
 %token UNIT LIST LANGLE RANGLE COMMA ARROW
 %token COLON
+%token STAR
 %token MATCH WITH VERTICALLINE
 %token TICK
-%token LET ASSIGN IN
+%token LET ASSIGN IN LETP
 %token WILD
 %token CONS
 %token FUN
@@ -34,6 +35,7 @@ let rec extract_typ = function
 %left PMATCH PLET
 %right CONS
 %left APP
+%left STAR
 
 %type <Ast.gdecl list> program
 
@@ -69,6 +71,7 @@ typ_assn:
   UNIT { A.UNIT }
   | LIST LPAREN atype RPAREN { A.LIST $3 }
   | atype ARROW atype {A.Arrow ($1, $3)}
+  | typ STAR typ { A.Prod ($1, $3)}
   ;
 
 
@@ -95,6 +98,8 @@ exp:
   | LET IDENT ASSIGN exp IN exp %prec PLET { A.Let (A.ANNOT ($2, None), $4, $6) }
   | LET IDENT COLON typ ASSIGN exp IN exp %prec PLET { A.Let (A.ANNOT ($2, Some  $4), $6, $8) }
   | MATCH exp WITH VERTICALLINE LBRACKET RBRACKET ARROW exp VERTICALLINE ident CONS ident ARROW exp %prec PMATCH { A.Match ($2, $8, $10, $12, $14) }
+  | LETP ident COMMA ident ASSIGN exp IN exp %prec PLET {A.Letp ($6, $2, $4, $8)}
+  | LPAREN exp COMMA exp RPAREN {A.Pair ($2, $4)}
   | LPAREN RPAREN { A.Triv }
   ;
 
