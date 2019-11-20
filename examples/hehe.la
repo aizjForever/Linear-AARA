@@ -31,7 +31,7 @@ type l1_bad = L(<unit,0>)
 type l1_good = L(<unit,1>)
 type l2 = L(<unit,0>)
 
-type p = <l1_bad * l2, 0>
+type p = <l1_good * l2, 0>
 
 type pp = <l2,0>
 
@@ -43,3 +43,11 @@ fun rev_append (l: p): pp =
         let _ = tick 1 in
         let l2p = x::l2 in
         rev_append (xs, l2p)
+
+
+type innocent = L(<unit, 0>)
+fun f4 (xp: <unit,5>): <L(<unit,5>),0> = 
+    let x = () :: ([]:L(<unit,5>)) in
+    let _ = (x: innocent) in
+    let _ = (x: innocent) in
+    x
