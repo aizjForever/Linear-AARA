@@ -14,17 +14,18 @@ let rec extract_typ = function
 
 %}
 
-%token LPAREN RPAREN LBRACKET RBRACKET
+%token LPAREN RPAREN LBRACKET RBRACKET LCURLY RCURLY
 %token UNIT LIST LANGLE RANGLE COMMA ARROW
 %token COLON
-%token STAR
-%token MATCH WITH VERTICALLINE
+%token STAR DOT
+%token MATCH WITH VERTICALLINE CASE
 %token TICK
 %token LET ASSIGN IN LETP
 %token WILD
 %token CONS
 %token FUN
 %token TYPE
+%token OF
 %token <Int32.t> DECCONST
 %token <Symbol.t> IDENT
 %token EOF
@@ -33,6 +34,7 @@ let rec extract_typ = function
 
 
 %left PMATCH PLET
+%left DOT
 %right CONS
 %left APP
 %left STAR
@@ -82,6 +84,8 @@ gdecl :
 typedecl :
   TYPE IDENT ASSIGN typ_assn     { PS.insert $2 (PS.Normal $4) }
   | TYPE IDENT ASSIGN atype_assn { PS.insert $2 (PS.Annot  $4) }    
+  | TYPE IDENT ASSIGN VERTICALLINE IDENT OF atype VERTICALLINE IDENT OF atype { let ty = A.Sum (($5,$7), ($9,$11)) in 
+                                                                                PS.insert_label $5 ty; PS.insert_label $9 ty; PS.insert $2 (PS.Normal ty) }
   ;
 
 
@@ -99,6 +103,8 @@ exp:
   | LET IDENT COLON typ ASSIGN exp IN exp %prec PLET { A.Let (A.ANNOT ($2, Some  $4), $6, $8) }
   | MATCH exp WITH VERTICALLINE LBRACKET RBRACKET ARROW exp VERTICALLINE ident CONS ident ARROW exp %prec PMATCH { A.Match ($2, $8, $10, $12, $14) }
   | LETP ident COMMA ident ASSIGN exp IN exp %prec PLET {A.Letp ($6, $2, $4, $8)}
+  | IDENT DOT exp {let ty = PS.lookup_label $1 in A.Inj (ty, $1, $3)}
+  | CASE exp LCURLY IDENT DOT ident ARROW exp VERTICALLINE IDENT DOT ident ARROW exp RCURLY {A.Case ($2, $4, $6, $8, $10, $12, $14)}
   | LPAREN exp COMMA exp RPAREN {A.Pair ($2, $4)}
   | LPAREN RPAREN { A.Triv }
   ;

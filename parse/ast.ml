@@ -1,6 +1,7 @@
 (* Linear AARA AST
 Author: Zejie Ai; Anlun Xu
 *)
+
 open Printf
 type ident = Symbol.t
 
@@ -10,7 +11,8 @@ type typ =
 | ANYLIST (*for typing nil*)
 | LIST of annotated_typ
 | Arrow of annotated_typ * annotated_typ
-| Prod of typ * typ 
+| Prod of typ * typ
+| Sum of (ident * annotated_typ) * (ident * annotated_typ)
 
 
 and annotated_typ = typ * Int32.t
@@ -30,6 +32,8 @@ type exp =
 | Match of exp * exp * var_annot * var_annot * exp (*match e with | [] -> e1 | x/_ :: xs/_ -> e2*)
 | Pair of exp * exp
 | Letp of exp * var_annot * var_annot * exp (*letp x1,x2 = e in e1*)
+| Inj of typ * ident * exp
+| Case of exp * ident * var_annot * exp * ident * var_annot * exp  
 | Triv
 | NIL of typ option
 
@@ -48,6 +52,7 @@ let rec sub_type ty1 ty2 = match (ty1, ty2) with |
 | ANYLIST, LIST _ -> true
 | LIST _, ANYLIST -> false
 | Prod (a,b), Prod (c,d) -> sub_type a c && sub_type b d
+| Sum ((_,a),(_,b)), Sum ((_,c),(_,d)) -> sub_type_annot a c && sub_type_annot b d
 | _ -> false 
 
 and sub_type_annot aty1 aty2 = match (aty1, aty2) with |
@@ -59,7 +64,9 @@ let rec typ_to_string = function
 | ANYLIST -> "L(Any)"
 | LIST typ -> sprintf "L(%s)" (annotated_typ_to_string typ)
 | Arrow (t1,t2) -> (annotated_typ_to_string t1) ^ " -> " ^ (annotated_typ_to_string t2)
-| Prod (t1, t2) -> sprintf "(%s * %s)" (typ_to_string t1) (typ_to_string t2) 
+| Prod (t1, t2) -> sprintf "(%s * %s)" (typ_to_string t1) (typ_to_string t2)
+| Sum ((lab1, ty1), (lab2, ty2)) -> 
+    sprintf "%s. %s + %s. %s" (Symbol.name lab1) (annotated_typ_to_string ty1) (Symbol.name lab2) (annotated_typ_to_string ty2)
 and annotated_typ_to_string =
 function | (typ, pot) -> sprintf "<%s,%ld>" (typ_to_string typ) pot
 
@@ -90,6 +97,11 @@ let rec exp_to_string = function
 | Letp (e, idx1, idx2, e1) -> 
     sprintf "letp %s, %s = %s\n in\n %s \n end" (make_id_from_typ_annot idx1) 
     (make_id_from_typ_annot idx2) (exp_to_string e) (exp_to_string e1)
+| Inj (ty, lab, e) -> sprintf "(in{%s}[%s](%s))" (typ_to_string ty) (Symbol.name lab) (exp_to_string e)
+| Case (e, lab_left, idx1, e1, lab_right, idx2, e2) -> 
+    sprintf "case %s \n of {\n %s. %s -> %s\n %s. %s -> %s\n end\n" (exp_to_string e) 
+    (Symbol.name lab_left) (make_id_from_typ_annot idx1) (exp_to_string e1) 
+    (Symbol.name lab_right) (make_id_from_typ_annot idx2) (exp_to_string e2)
 
 | _ -> failwith "Impossible"
 

@@ -44,10 +44,18 @@ fun rev_append (l: p): pp =
         let l2p = x::l2 in
         rev_append (xs, l2p)
 
-
 type innocent = L(<unit, 0>)
 fun f4 (xp: <unit,5>): <L(<unit,5>),0> = 
     let x = () :: ([]:L(<unit,5>)) in
     let _ = (x: innocent) in
     let _ = (x: innocent) in
     x
+
+fun f5 (x: <L(<unit,5>),0>): <L(<unit, 5>), 0> = 
+ match x with | [] -> (x:L(<unit,5>)) | xx::xs -> (x:L(<unit,5>))
+
+
+type bool = | true of <unit, 0> | false of <unit,0>
+fun f6 (x: <bool,1>): <unit, 0> = true. true. x
+
+

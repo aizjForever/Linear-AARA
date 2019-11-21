@@ -53,18 +53,23 @@ rule initial =
   | '['         { T.LBRACKET}
   | ']'         { T.RBRACKET}
   | '*'         { T.STAR }
+  | '{'         { T.LCURLY}
+  | '}'         { T.RCURLY}
+  | '.'         { T.DOT   }
 
 
-  | "type"      { T.TYPE }
-  | "unit"      { T.UNIT }
+  | "type"      { T.TYPE  }
+  | "unit"      { T.UNIT  }
+  | "case"      { T.CASE  }
   | "match"     { T.MATCH }
-  | "with"      { T.WITH }
-  | "tick"      { T.TICK }
-  | "let"       { T.LET }
-  | "letp"      { T.LETP}
-  | "in"        { T.IN }
-  | "::"        { T.CONS }
-  | "fun"       { T.FUN }
+  | "with"      { T.WITH  }
+  | "of"        { T.OF    }
+  | "tick"      { T.TICK  }
+  | "let"       { T.LET   }
+  | "letp"      { T.LETP  }
+  | "in"        { T.IN    }
+  | "::"        { T.CONS  }
+  | "fun"       { T.FUN   }
   | "->"        { T.ARROW }
 
   | decnum as n { decnumber n lexbuf }
