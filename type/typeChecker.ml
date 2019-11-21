@@ -37,7 +37,7 @@ let rec validate ctx = function
     end
     | _ -> failwith "Impossible" 
 
-let rec combine_typ ~key:k ty1 ty2 = 
+let rec combine_typ_additive ~key:k ty1 ty2 = 
     let rec merge ty1 ty2 = match (ty1, ty2) with
     | (A.UNIT, A.UNIT) -> A.UNIT
     | (A.LIST a, A.LIST b) -> A.LIST (merge_annot_typ a b)
@@ -45,8 +45,8 @@ let rec combine_typ ~key:k ty1 ty2 =
     | (A.ANYLIST, A.LIST _) -> ty2
     | (A.ANYLIST, A.ANYLIST) -> A.ANYLIST
     | (A.Arrow (_,_), A.Arrow (_, _)) -> begin
-        if A.sub_type ty1 ty2 then ty2
-        else if A.sub_type ty2 ty1 then ty1 else raise TypeCheckError
+        if A.sub_type ty1 ty2 then ty1
+        else if A.sub_type ty2 ty1 then ty2 else raise TypeCheckError
     end
     | (A.Prod (a,b), A.Prod (c,d)) -> A.Prod (merge a c, merge b d)
     | _ -> raise TypeCheckError (*not quite possible*) 
@@ -55,6 +55,22 @@ let rec combine_typ ~key:k ty1 ty2 =
     in
     merge ty1 ty2
    
+let rec combine_typ_branch ~key:k ty1 ty2 = 
+    let rec bigger_type ty1 ty2 = 
+        if A.sub_type ty1 ty2 then ty1 else if A.sub_type ty2 ty1 then ty2 
+        else raise TypeCheckError
+    in
+    let rec merge ty1 ty2 = match (ty1, ty2) with
+    | (A.UNIT, A.UNIT)
+    | (A.LIST _, A.LIST _) 
+    | (A.LIST _, A.ANYLIST) 
+    | (A.ANYLIST, A.LIST _)
+    | (A.ANYLIST, A.ANYLIST)
+    | (A.Arrow (_,_), A.Arrow (_, _)) -> bigger_type ty1 ty2
+    | (A.Prod (a,b), A.Prod (c,d)) -> A.Prod (bigger_type a c, bigger_type b d)
+    | _ -> raise TypeCheckError
+    in
+    merge ty1 ty2
 
 let rec backward_check = function 
 | A.Var A.ANNOT (id, Some ty) -> C.Map.singleton (module S) id ty
@@ -63,18 +79,18 @@ let rec backward_check = function
 | A.Cons (e, es) -> begin
     let ctx_e = backward_check e in
     let ctx_es = backward_check es in
-    C.Map.merge_skewed ctx_e ctx_es ~combine: combine_typ
+    C.Map.merge_skewed ctx_e ctx_es ~combine: combine_typ_additive
 end
 | A.App (e1, e2) -> begin
     let ctx_e1 = backward_check e1 in
     let ctx_e2 = backward_check e2 in
-    C.Map.merge_skewed ctx_e1 ctx_e2 ~combine: combine_typ
+    C.Map.merge_skewed ctx_e1 ctx_e2 ~combine: combine_typ_additive
 end
 
 | A.Let (A.WILD, e, e1) -> begin
     let ctx_e = backward_check e in
     let ctx_e1 = backward_check e1 in
-    C.Map.merge_skewed ctx_e ctx_e1 ~combine: combine_typ
+    C.Map.merge_skewed ctx_e ctx_e1 ~combine: combine_typ_additive
 end
 
 | A.Let (A.ANNOT (id, Some ty), e, e1) -> begin
@@ -85,7 +101,7 @@ end
       begin
           let ctx_e1 = C.Map.remove ctx_e1 id in
           let ctx_e = backward_check e in
-          C.Map.merge_skewed ctx_e ctx_e1 ~combine: combine_typ
+          C.Map.merge_skewed ctx_e ctx_e1 ~combine: combine_typ_additive
       end
       else raise TypeCheckError
 end
@@ -96,7 +112,8 @@ end
     let ctx_e1 = validate ctx_e1 idx in
     let ctx_e0 = backward_check e0 in
     let ctx_e = backward_check e in
-    C.Map.merge_skewed (C.Map.merge_skewed ctx_e1 ctx_e0 ~combine: combine_typ) ctx_e ~combine: combine_typ
+    C.Map.merge_skewed (C.Map.merge_skewed ctx_e1 ctx_e0 ~combine: combine_typ_branch) 
+                        ctx_e ~combine: combine_typ_additive
 end
 
 | A.NIL _ -> C.Map.empty (module S)
@@ -104,7 +121,7 @@ end
 | A.Pair (e1, e2) -> begin
     let ctx_e1 = backward_check e1 in
     let ctx_e2 = backward_check e2 in
-    C.Map.merge_skewed ctx_e1 ctx_e2 ~combine: combine_typ
+    C.Map.merge_skewed ctx_e1 ctx_e2 ~combine: combine_typ_additive
 end 
 
 | A.Letp (e, idx1, idx2, e1) -> begin
@@ -112,7 +129,7 @@ end
     let ctx_e1 = validate ctx_e1 idx2 in
     let ctx_e1 = validate ctx_e1 idx1 in
     let ctx_e = backward_check e in
-    C.Map.merge_skewed ctx_e1 ctx_e ~combine: combine_typ
+    C.Map.merge_skewed ctx_e1 ctx_e ~combine: combine_typ_additive
 end
 
 | _ -> failwith "Impossible"

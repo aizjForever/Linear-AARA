@@ -52,10 +52,11 @@ fun f4 (xp: <unit,5>): <L(<unit,5>),0> =
     x
 
 fun f5 (x: <L(<unit,5>),0>): <L(<unit, 5>), 0> = 
- match x with | [] -> (x:L(<unit,5>)) | xx::xs -> (x:L(<unit,5>))
+ match (x: L(<unit,0>)) with | [] -> (x:L(<unit,5>)) | xx::xs -> (x:L(<unit,5>))
 
-
-type bool = | true of <unit, 0> | false of <unit,0>
-fun f6 (x: <bool,1>): <unit, 0> = true. true. x
+fun f6 (x: <L(<unit,1>),0>): <unit,0> = 
+    let _ = (f6: <L(<unit,1>),0> -> <unit,0>) ([]:L(<unit,33>)) in
+    let _ = (f6: <L(<unit,1>),0> -> <unit,0>) ([]:L(<unit,1>)) in
+    ()
 
 
