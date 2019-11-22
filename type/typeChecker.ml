@@ -21,6 +21,7 @@ exception Unimplemented
 let (<-|) = A.make_annot_typ 
 let sub = Int32.sub
 let add = Int32.add
+let eq a b = Symbol.compare a b = 0
 
 let rec val_and_del ctx id exp_typ =
     match (C.Map.find ctx id) with
@@ -49,6 +50,8 @@ let rec combine_typ_additive ~key:k ty1 ty2 =
         else if A.sub_type ty2 ty1 then ty2 else raise TypeCheckError
     end
     | (A.Prod (a,b), A.Prod (c,d)) -> A.Prod (merge a c, merge b d)
+    | ((A.Sum ((left, a), (right, b))), (A.Sum ((left2, c), (right2, d)))) when (eq left left2 && eq right right2)-> 
+        A.Sum ((left, merge_annot_typ a c), (right, merge_annot_typ b d))
     | _ -> raise TypeCheckError (*not quite possible*) 
 
     and merge_annot_typ (ty1, q1) (ty2, q2) = (merge ty1 ty2, add q1 q2)
@@ -60,6 +63,9 @@ let rec combine_typ_branch ~key:k ty1 ty2 =
         if A.sub_type ty1 ty2 then ty1 else if A.sub_type ty2 ty1 then ty2 
         else raise TypeCheckError
     in
+    let rec bigger_type_annot ty1 ty2 = 
+        if A.sub_type_annot ty1 ty2 then ty1 else if A.sub_type_annot ty2 ty1 then ty2 else raise TypeCheckError
+    in
     let rec merge ty1 ty2 = match (ty1, ty2) with
     | (A.UNIT, A.UNIT)
     | (A.LIST _, A.LIST _) 
@@ -68,6 +74,9 @@ let rec combine_typ_branch ~key:k ty1 ty2 =
     | (A.ANYLIST, A.ANYLIST)
     | (A.Arrow (_,_), A.Arrow (_, _)) -> bigger_type ty1 ty2
     | (A.Prod (a,b), A.Prod (c,d)) -> A.Prod (bigger_type a c, bigger_type b d)
+    | ((A.Sum ((left, a), (right, b))), (A.Sum ((left2, c), (right2, d)))) when (eq left left2 && eq right right2) -> 
+        A.Sum ((left, bigger_type_annot a c), (right, bigger_type_annot b d))
+
     | _ -> raise TypeCheckError
     in
     merge ty1 ty2
@@ -131,6 +140,18 @@ end
     let ctx_e = backward_check e in
     C.Map.merge_skewed ctx_e1 ctx_e ~combine: combine_typ_additive
 end
+
+| A.Inj (ty, lab, e) -> backward_check e
+| A.Case (e, _, idx1, e1, _, idx2, e2) -> begin
+    let ctx_e1 = backward_check e1 in
+    let ctx_e1 = validate ctx_e1 idx1 in
+    let ctx_e2 = backward_check e2 in
+    let ctx_e2 = validate ctx_e2 idx2 in
+    let ctx_pre_e = C.Map.merge_skewed ctx_e1 ctx_e2 ~combine: combine_typ_branch in
+    let ctx_e = backward_check e in
+    C.Map.merge_skewed ctx_e ctx_pre_e ~combine: combine_typ_additive
+end
+
 
 | _ -> failwith "Impossible"
 
@@ -272,6 +293,56 @@ end
         
 
     | _ -> raise TypeCheckError
+end
+
+| A.Inj (ty, lab, e) -> begin
+    let annot_e, (ty_e, q1) = forward_check ctx q e in
+    let rec validate typ = 
+        let A.Sum ((left, (left_typ, left_q)), (right, (right_typ,right_q))) = ty in
+        if eq left lab then begin
+            let rem = sub q1 left_q in
+            if A.sub_type ty_e left_typ && rem >= 0l then ty <-| rem else raise TypeCheckError
+        end 
+        else if eq right lab then begin
+            let rem = sub q1 right_q in
+            if A.sub_type ty_e right_typ && rem >= 0l then ty <-| rem else raise TypeCheckError
+        end 
+        else raise TypeCheckError
+    in
+    A.Inj (ty, lab, annot_e), validate ty_e
+end
+
+| A.Case (e, lab1, idx1, e1, lab2, idx2, e2) -> begin
+    let annot_e, (ty_e, q1) = forward_check ctx q e in
+    match ty_e with
+    | A.Sum ((left, (left_typ, left_q)), (right, (right_typ,right_q))) -> begin
+        let rec get_typ id e exp_typ q = 
+            let new_ctx, new_id = validate_var id ctx exp_typ in
+            let annot_e, (ty_e, q') = forward_check new_ctx (add q q1) e in
+            new_id, annot_e,ty_e <-| q' 
+        in
+        let (new_idx1, annot_e1,ty_1),lab2_exp = begin
+            if eq left lab1 then begin
+               get_typ idx1 e1 left_typ left_q, right
+            end
+            else if eq right lab1 then begin
+               get_typ idx1 e1 right_typ right_q, left
+            end
+            else raise TypeCheckError 
+        end
+        
+        in
+        let new_idx2, annot_e2, ty_2 = 
+        if eq lab2 lab2_exp then begin
+            let b = eq lab2 left in
+            get_typ idx2 e2 (if b then left_typ else right_typ) (if b then left_q else right_q)
+        end
+        else raise TypeCheckError
+        in
+        let combined_typ = combine_annot_typ ty_1 ty_2 in
+        A.Case (annot_e, lab1, new_idx1, annot_e1, lab2, new_idx2, annot_e2), combined_typ
+    end
+    | _ -> raise TypeCheckError 
 end
 
 | _ -> failwith "Impossible"

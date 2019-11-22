@@ -99,7 +99,7 @@ let rec exp_to_string = function
     (make_id_from_typ_annot idx2) (exp_to_string e) (exp_to_string e1)
 | Inj (ty, lab, e) -> sprintf "(in{%s}[%s](%s))" (typ_to_string ty) (Symbol.name lab) (exp_to_string e)
 | Case (e, lab_left, idx1, e1, lab_right, idx2, e2) -> 
-    sprintf "case %s \n of {\n %s. %s -> %s\n %s. %s -> %s\n end\n" (exp_to_string e) 
+    sprintf "case %s \n of {\n %s. %s -> %s\n | %s. %s -> %s\n end\n" (exp_to_string e) 
     (Symbol.name lab_left) (make_id_from_typ_annot idx1) (exp_to_string e1) 
     (Symbol.name lab_right) (make_id_from_typ_annot idx2) (exp_to_string e2)
 

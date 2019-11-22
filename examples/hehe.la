@@ -59,4 +59,16 @@ fun f6 (x: <L(<unit,1>),0>): <unit,0> =
     let _ = (f6: <L(<unit,1>),0> -> <unit,0>) ([]:L(<unit,1>)) in
     ()
 
+type bool = | true of <unit,1> | false of <unit, 0>
+
+fun f7 (x: <bool,0>): <unit,0> = 
+    case (x) {true. _ -> ()| false. _ -> ()}
+
+
+type bool = | true of <unit, 1> | false of <unit, 0>
+type f8 = <bool, 0>
+fun f8 (x: f8) : <unit, 0> = 
+    case (x) {true._ -> let _ = tick 1 in f8 (false.()) | false._ -> let _ = tick -1 in f8 (true. ())}
+
+
 
