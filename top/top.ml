@@ -10,7 +10,7 @@ exception EXIT
 type mode = Typecheck | TypeInfer
 
 type cmdline =
-{ 
+{
   mode: mode;
   dynamics: bool;
   verbose: bool;
@@ -28,7 +28,7 @@ let read_cmdline () =
     let dump_ast = ref false in
     let parse_only = ref false in
     let filename = ref None in
-    let opts = 
+    let opts =
     [ ('i', "infer", set mode TypeInfer, None);
       ('d', "dynamics", set dynamics true, None);
       ('v', "verbose",   set verbose true, None);
@@ -41,7 +41,7 @@ let read_cmdline () =
         | Some s -> say "Error: more than one input file"; raise EXIT in
 
     let () = parse_cmdline opts file_opt in
-    { 
+    {
       mode = !mode;
       dynamics = !dynamics;
       verbose = !verbose;
@@ -65,12 +65,14 @@ let main cmd =
     else
     begin
       let result = TypeChecker.check ast in
-      if result = [] then say (sprintf "Typecheck completes for %s\n" source) else 
+      if result = [] then say (sprintf "Typecheck completes for %s\n" source) else
       say (sprintf "Type does not check for %s\n" (List.fold_left result  ~init:"" ~f:(fun base funName -> base ^ (sprintf "`%s' " funName))));
-      exit 0
-    end
-    
-
+    end;
+    let result = Dynamics.eval ast 14 in
+    List.iter
+    result
+    (fun report -> print_string (report ^ "\n"));
+    exit 0;
 
   with
   | EXIT -> exit 1

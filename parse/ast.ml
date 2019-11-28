@@ -19,7 +19,7 @@ and annotated_typ = typ * Int32.t
 
 
 
-type var_annot = 
+type var_annot =
 | WILD
 | ANNOT of ident * (typ option)
 
@@ -33,9 +33,10 @@ type exp =
 | Pair of exp * exp
 | Letp of exp * var_annot * var_annot * exp (*letp x1,x2 = e in e1*)
 | Inj of typ * ident * exp
-| Case of exp * ident * var_annot * exp * ident * var_annot * exp  
+| Case of exp * ident * var_annot * exp * ident * var_annot * exp
 | Triv
 | NIL of typ option
+| Clo of (ident * (annotated_typ * ident) * annotated_typ * exp)
 
 type gdecl =
 | Fdefn of (ident * (annotated_typ * ident) * annotated_typ * exp)
@@ -44,7 +45,7 @@ type program = gdecl list
 
 let make_annot_typ p q = (p,q)
 
-let rec sub_type ty1 ty2 = match (ty1, ty2) with | 
+let rec sub_type ty1 ty2 = match (ty1, ty2) with |
   UNIT, UNIT -> true
 | LIST a, LIST b -> sub_type_annot a b
 | Arrow (a,b), Arrow (a',b') -> sub_type_annot a' a && sub_type_annot b b'
@@ -53,11 +54,11 @@ let rec sub_type ty1 ty2 = match (ty1, ty2) with |
 | LIST _, ANYLIST -> false
 | Prod (a,b), Prod (c,d) -> sub_type a c && sub_type b d
 | Sum ((_,a),(_,b)), Sum ((_,c),(_,d)) -> sub_type_annot a c && sub_type_annot b d
-| _ -> false 
+| _ -> false
 
 and sub_type_annot aty1 aty2 = match (aty1, aty2) with |
   ((ty1,q1),(ty2,q2)) -> (sub_type ty1 ty2) && q1 >= q2
- 
+
 
 let rec typ_to_string = function
 | UNIT -> "unit"
@@ -65,7 +66,7 @@ let rec typ_to_string = function
 | LIST typ -> sprintf "L(%s)" (annotated_typ_to_string typ)
 | Arrow (t1,t2) -> (annotated_typ_to_string t1) ^ " -> " ^ (annotated_typ_to_string t2)
 | Prod (t1, t2) -> sprintf "(%s * %s)" (typ_to_string t1) (typ_to_string t2)
-| Sum ((lab1, ty1), (lab2, ty2)) -> 
+| Sum ((lab1, ty1), (lab2, ty2)) ->
     sprintf "%s. %s + %s. %s" (Symbol.name lab1) (annotated_typ_to_string ty1) (Symbol.name lab2) (annotated_typ_to_string ty2)
 and annotated_typ_to_string =
 function | (typ, pot) -> sprintf "<%s,%ld>" (typ_to_string typ) pot
@@ -88,19 +89,19 @@ let rec exp_to_string = function
   sprintf "(let %s: %s = %s \n in %s \n end)" (Symbol.name id) (typ_to_string typ) (exp_to_string e) (exp_to_string e1)
 
 | Match (e,e1,idx,idxs,e2) ->
-  sprintf "(match (%s) with \n | [] -> %s \n | %s::%s -> %s)" (exp_to_string e) 
+  sprintf "(match (%s) with \n | [] -> %s \n | %s::%s -> %s)" (exp_to_string e)
   (exp_to_string e1) (make_id_from_typ_annot idx) (make_id_from_typ_annot idxs) (exp_to_string e2)
 | Triv -> "()"
 | NIL None -> "[]"
 | NIL (Some ty) -> sprintf "([]: %s)" (typ_to_string ty)
 | Pair (e1, e2) -> sprintf "(%s, %s)" (exp_to_string e1) (exp_to_string e2)
-| Letp (e, idx1, idx2, e1) -> 
-    sprintf "letp %s, %s = %s\n in\n %s \n end" (make_id_from_typ_annot idx1) 
+| Letp (e, idx1, idx2, e1) ->
+    sprintf "letp %s, %s = %s\n in\n %s \n end" (make_id_from_typ_annot idx1)
     (make_id_from_typ_annot idx2) (exp_to_string e) (exp_to_string e1)
 | Inj (ty, lab, e) -> sprintf "(in{%s}[%s](%s))" (typ_to_string ty) (Symbol.name lab) (exp_to_string e)
-| Case (e, lab_left, idx1, e1, lab_right, idx2, e2) -> 
-    sprintf "case %s \n of {\n %s. %s -> %s\n | %s. %s -> %s\n end\n" (exp_to_string e) 
-    (Symbol.name lab_left) (make_id_from_typ_annot idx1) (exp_to_string e1) 
+| Case (e, lab_left, idx1, e1, lab_right, idx2, e2) ->
+    sprintf "case %s \n of {\n %s. %s -> %s\n | %s. %s -> %s\n end\n" (exp_to_string e)
+    (Symbol.name lab_left) (make_id_from_typ_annot idx1) (exp_to_string e1)
     (Symbol.name lab_right) (make_id_from_typ_annot idx2) (exp_to_string e2)
 
 | _ -> failwith "Impossible"

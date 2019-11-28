@@ -1,0 +1,11 @@
+type a = L(<unit, 10>)
+type b = L(<L(<unit, 1000>), 0>)
+type c = <b, 10>
+type d = <b, 0>
+
+fun f3 (x: <L(<unit, 1>),0>): <unit, 0> =
+  match x with
+  | [] -> tick 0
+  | aa::bb ->
+    let _ = tick 1 in
+    f3 bb
