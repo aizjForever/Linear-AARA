@@ -1,0 +1,18 @@
+type l1_bad = L(<unit,0>)
+type l1_good = L(<unit,1>)
+type l2 = L(<unit,0>)
+
+type in_t = <l1_good * l2, 0>
+
+type out = <l2,0>
+
+fun rev_append (l: in_t): out =
+    letp l1,l2 = l in
+    match l1 with
+    | [] -> l2
+    | x::xs ->
+        let _ = tick 1 in
+        let l2p = x::l2 in
+        rev_append (xs, l2p)
+
+

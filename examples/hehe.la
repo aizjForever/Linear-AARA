@@ -70,5 +70,9 @@ type f8 = <bool, 0>
 fun f8 (x: f8) : <unit, 0> = 
     case (x) {true._ -> let _ = tick 1 in f8 (false.()) | false._ -> let _ = tick -1 in f8 (true. ())}
 
+fun f9 (x: <unit, 0>): <unit, 0> = 
+    let xx = true.() in
+    f8 xx
+
 
 

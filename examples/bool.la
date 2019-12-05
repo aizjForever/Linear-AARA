@@ -1,0 +1,10 @@
+type bool = | true of <unit, 1> | false of <unit, 0>
+type f = <bool, 0>
+fun f (x: f) : <unit, 0> =
+    case (x) {
+    true._ -> let _ = tick 1 in f (false.()) 
+    | false._ -> let _ = tick -1 in f (true. ())
+}
+
+
+

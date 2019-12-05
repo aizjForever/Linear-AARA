@@ -1,0 +1,17 @@
+type inq = L(<unit, 1>)
+type outq = L(<unit, 0>)
+type inqouq = inq * outq * unit
+
+type inqq = L(<unit, 0>)
+type output = inqq * outq
+fun enqueue (y : <inqouq, 1>) : <output, 0> =
+  let _ = tick 1 in
+  letp a, x = y in
+  letp inq, outq = a in
+  let inqq = x :: (inq:inqq) in
+  (inqq, outq)
+
+
+
+
+
