@@ -28,3 +28,5 @@ sandbox.ml
 
 setup.data
 setup.log
+
+*.pdf
