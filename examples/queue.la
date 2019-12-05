@@ -1,0 +1,57 @@
+type inq = L(<unit, 1>)
+type outq = L(<unit, 0>)
+type inqouq = inq * outq * unit
+
+type inqq = L(<unit, 0>)
+type output = inqq * outq
+fun enqueue (y : <inqouq, 1>) : <output, 0> =
+  let _ = tick 1 in
+  letp a, x = y in
+  letp inq, outq = a in
+  let inqq = x :: (inq:inqq) in
+  (inqq, outq)
+
+
+
+type l1_good = L(<unit,2>)
+type l2 = L(<unit,1>)
+type p = <l1_good * l2, 0>
+type pp = <l2,0>
+
+fun rev_append (l: p): pp =
+    letp l1,l2 = l in
+    match l1 with
+    | [] -> l2
+    | x::xs ->
+        let _ = tick 1 in
+        let l2p = x::l2 in
+        rev_append (xs, l2p)
+
+fun rev (l : <l1_good,0>) : pp =
+  let nil = [] in
+  rev_append (l, nil)
+
+
+fun dequeue (x : <L(<unit, 2>) * L(<unit, 1>), 0>) : <L(<unit, 2>) * L(<unit, 1>) * L(<unit, 0>), 0> =
+  letp inq, outq = x in
+  match outq with
+  | [] ->
+    match (inq : L(<unit, 0>)) with
+    | [] ->
+      let no_elem = [] in
+      let empty_queue =
+        let nil1 = [] in
+        let nil2 = [] in
+        (nil1, nil2)
+      in
+      (empty_queue, no_elem)
+    | x::xs ->
+      let nil = [] in
+      let inq_rev = rev inq in
+      dequeue (nil, inq_rev)
+  | y::ys ->
+    let queue = (inq, ys) in
+    let nil = [] in
+    let _ = tick 1 in
+    let elem = y::nil in
+    (queue, elem)
